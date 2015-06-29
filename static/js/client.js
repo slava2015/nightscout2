@@ -124,14 +124,17 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     return decodeHTMLEntities;
   })();
 
-  function updateTitle() {
+  function updateTitle(message) {
 
+    function s(value, sep) { return value ? value + ' ' : sep || ''; }
+
+	if (!message && !alarmInProgress) {
     var time = latestSGV ? new Date(latestSGV.x).getTime() : (prevSGV ? new Date(prevSGV.x).getTime() : -1)
       , ago = timeAgo(time, browserSettings);
 
     var bg_title = browserSettings.customTitle || '';
 
-    function s(value, sep) { return value ? value + ' ' : sep || ''; }
+    if (browserSettings.customTitle) $('h1.customTitle').text(browserSettings.customTitle);
 
     if (ago && ago.status !== 'current') {
       bg_title =  s(ago.value) + s(ago.label, ' - ') + bg_title;
@@ -144,6 +147,10 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
         var deltaDisplay = delta.calc(prevSGV && prevSGV.y, latestSGV && latestSGV.y, sbx).display;
         bg_title = s(scaleBg(currentMgdl)) + s(deltaDisplay) + s(decodeEntities(latestSGV.direction)) + bg_title;
       }
+    }
+    } else {
+    	bg_title = message.title + ' ' + message.message;
+    	$('h1.customTitle').text(bg_title);
     }
 
     $(document).attr('title', bg_title);
@@ -1030,7 +1037,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   }
 
 
-  function generateAlarm(file) {
+  function generateAlarm(file, reason) {
     alarmInProgress = true;
     var selector = '.audio.alarms audio.' + file;
     d3.select(selector).each(function (d, i) {
@@ -1040,6 +1047,9 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     });
     $('.bgButton').addClass(file == urgentAlarmSound ? 'urgent' : 'warning');
     $('#container').addClass('alarming');
+
+    updateTitle(reason);
+
   }
 
   function playAlarm(audio) {
@@ -1062,6 +1072,8 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
 
     closeNotification();
     $('#container').removeClass('alarming');
+
+    updateTitle();
 
     // only emit ack if client invoke by button press
     if (isClient) {
@@ -1343,10 +1355,12 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       currentAlarmType = alarm.type;
       console.info('generating timeAgoAlarm', alarm.type);
       $('#container').addClass('alarming-timeago');
+      console.log('ago:', ago);
+      var message = {'title': 'Last data received ', 'message': ago.value + ago.label};
       if (level == 'warn') {
-        generateAlarm(alarmSound);
+        generateAlarm(alarmSound, message);
       } else {
-        generateAlarm(urgentAlarmSound);
+        generateAlarm(urgentAlarmSound, message);
       }
     }
   }
@@ -1617,26 +1631,29 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       return latestSGV.y <= app.thresholds.bg_target_top;
     }
 
-    socket.on('alarm', function () {
+    socket.on('alarm', function (notify) {
       console.info('alarm received from server');
+      console.log('notify:',notify);
       var enabled = (isAlarmForHigh() && browserSettings.alarmHigh) || (isAlarmForLow() && browserSettings.alarmLow);
       if (enabled) {
         console.log('Alarm raised!');
         currentAlarmType = 'alarm';
-        generateAlarm(alarmSound);
+        generateAlarm(alarmSound,notify);
       } else {
         console.info('alarm was disabled locally', latestSGV.y, browserSettings);
       }
       brushInProgress = false;
       updateChart(false);
     });
-    socket.on('urgent_alarm', function () {
+    socket.on('urgent_alarm', function (notify) {
       console.info('urgent alarm received from server');
+	  console.log('notify:',notify);
+	  
       var enabled = (isAlarmForHigh() && browserSettings.alarmUrgentHigh) || (isAlarmForLow() && browserSettings.alarmUrgentLow);
       if (enabled) {
         console.log('Urgent alarm raised!');
         currentAlarmType = 'urgent_alarm';
-        generateAlarm(urgentAlarmSound);
+        generateAlarm(urgentAlarmSound,notify);
       } else {
         console.info('urgent alarm was disabled locally', latestSGV.y, browserSettings);
       }
