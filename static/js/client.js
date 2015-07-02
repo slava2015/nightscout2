@@ -39,7 +39,6 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     , data = []
     , foucusRangeMS = THREE_HOURS_MS
     , clientAlarms = {}
-    , audio = document.getElementById('audio')
     , alarmInProgress = false
     , currentAlarmType = null
     , alarmSound = 'alarm.mp3'
@@ -80,7 +79,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   }
 
   function isTimeFormat24() {
-    return browserSettings && browserSettings.timeFormat && parseInt(browserSettings.timeFormat) == 24;
+    return browserSettings && browserSettings.timeFormat && parseInt(browserSettings.timeFormat) === 24;
   }
 
   function getTimeFormat(isForScale, compact) {
@@ -96,7 +95,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
 
   // lixgbg: Convert mg/dL BG value to metric mmol
   function scaleBg(bg) {
-    if (browserSettings.units == 'mmol') {
+    if (browserSettings.units === 'mmol') {
       return Nightscout.units.mgdlToMMOL(bg);
     } else {
       return bg;
@@ -177,8 +176,8 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       [':%S', function(d) { return d.getSeconds(); }],
       ['%I:%M', function(d) { return d.getMinutes(); }],
       [isTimeFormat24() ? '%H:%M' : '%-I %p', function(d) { return d.getHours(); }],
-      ['%a %d', function(d) { return d.getDay() && d.getDate() != 1; }],
-      ['%b %d', function(d) { return d.getDate() != 1; }],
+      ['%a %d', function(d) { return d.getDay() && d.getDate() !== 1; }],
+      ['%b %d', function(d) { return d.getDate() !== 1; }],
       ['%B', function(d) { return d.getMonth(); }],
       ['%Y', function() { return true; }]
     ]);
@@ -231,7 +230,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     // This shouldn't need to be generated and can be fixed by using xScale.domain([x0,x1]) function with
     // 2 days before now as x0 and 30 minutes from now for x1 for context plot, but this will be
     // required to happen when 'now' event is sent from websocket.js every minute.  When fixed,
-    // remove all 'color != 'none'' code
+    // remove this code and all references to `type: 'server-forecast'`
     var lastTime = data.length > 0 ? data[data.length - 1].date.getTime() : Date.now();
     var n = Math.ceil(12 * (1 / 2 + (now - lastTime) / SIXTY_MINS_IN_MS)) + 1;
     for (var i = 1; i <= n; i++) {
@@ -267,7 +266,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     // update the opacity of the context data points to brush extent
     context.selectAll('circle')
       .data(data)
-      .style('opacity', function (d) { return 1; });
+      .style('opacity', 1);
   }
 
   function brushEnded() {
@@ -282,7 +281,9 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   }
 
   function inRetroMode() {
-    if (!brush) return false;
+    if (!brush) {
+      return false;
+    }
 
     var time = brush.extent()[1].getTime();
 
@@ -322,7 +323,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     var brushExtent = brush.extent();
 
     // ensure that brush extent is fixed at 3.5 hours
-    if (brushExtent[1].getTime() - brushExtent[0].getTime() != foucusRangeMS) {
+    if (brushExtent[1].getTime() - brushExtent[0].getTime() !== foucusRangeMS) {
 
       // ensure that brush updating is with the time range
       if (brushExtent[0].getTime() + foucusRangeMS > d3.extent(data, dateFn)[1].getTime()) {
@@ -345,8 +346,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       , majorPills = $('.bgStatus .majorPills')
       , minorPills = $('.bgStatus .minorPills')
       , statusPills = $('.status .statusPills')
-      , lastEntry = $('#lastEntry');
-
+      ;
 
     function updateCurrentSGV(entry) {
         var value, time, ago, isCurrent;
@@ -355,7 +355,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
         ago = timeAgo(time, browserSettings);
         isCurrent = ago.status === 'current';
 
-      if (value == 9) {
+      if (value === 9) {
         currentBG.text('');
       } else if (value < 39) {
         currentBG.html(errorCodeToDisplay(value));
@@ -375,9 +375,9 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
         }
       }
 
-      currentBG.toggleClass('icon-hourglass', value == 9);
+      currentBG.toggleClass('icon-hourglass', value === 9);
       currentBG.toggleClass('error-code', value < 39);
-      currentBG.toggleClass('bg-limit', value == 39 || value > 400);
+      currentBG.toggleClass('bg-limit', value === 39 || value > 400);
 
       $('.container').removeClass('loading');
 
@@ -410,7 +410,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     var lookback = 2;
 
     var nowData = data.filter(function(d) {
-      return d.type == 'sgv';
+      return d.type === 'sgv';
     });
 
     if (inRetroMode()) {
@@ -420,7 +420,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       var lookbackTime = (lookback + 2) * FIVE_MINS_IN_MS + 2 * ONE_MIN_IN_MS;
       nowData = nowData.filter(function(d) {
         return d.date.getTime() >= brushExtent[1].getTime() - TWENTY_FIVE_MINS_IN_MS - lookbackTime &&
-          d.date.getTime() <= brushExtent[1].getTime() - TWENTY_FIVE_MINS_IN_MS
+          d.date.getTime() <= brushExtent[1].getTime() - TWENTY_FIVE_MINS_IN_MS;
       });
 
       // sometimes nowData contains duplicates.  uniq it.
@@ -473,18 +473,21 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     // selects all our data into data and uses date function to get current max date
     var focusCircles = focus.selectAll('circle').data(focusData, dateFn);
 
-    var focusRangeAdjustment = foucusRangeMS == THREE_HOURS_MS ? 1 : 1 + ((foucusRangeMS - THREE_HOURS_MS) / THREE_HOURS_MS / 8);
+    var focusRangeAdjustment = foucusRangeMS === THREE_HOURS_MS ? 1 : 1 + ((foucusRangeMS - THREE_HOURS_MS) / THREE_HOURS_MS / 8);
 
     var dotRadius = function(type) {
       var radius = prevChartWidth > WIDTH_BIG_DOTS ? 4 : (prevChartWidth < WIDTH_SMALL_DOTS ? 2 : 3);
-      if (type == 'mbg') radius *= 2;
-      else if (type == 'rawbg') radius = Math.min(2, radius - 1);
+      if (type === 'mbg') {
+        radius *= 2;
+      } else if (type === 'rawbg') {
+        radius = Math.min(2, radius - 1);
+      }
 
       return radius / focusRangeAdjustment;
     };
 
     function isDexcom(device) {
-      return device && device.toLowerCase().indexOf('dexcom') == 0;
+      return device && device.toLowerCase().indexOf('dexcom') === 0;
     }
 
     function prepareFocusCircles(sel) {
@@ -500,14 +503,14 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
         })
         .attr('fill', function (d) { return d.color; })
         .attr('opacity', function (d) { return futureOpacity(d.date.getTime() - latestSGV.x); })
-        .attr('stroke-width', function (d) { if (d.type == 'mbg') return 2; else return 0; })
+        .attr('stroke-width', function (d) { return d.type === 'mbg' ? 2 : 0; })
         .attr('stroke', function (d) {
           return (isDexcom(d.device) ? 'white' : '#0099ff');
         })
         .attr('r', function (d) { return dotRadius(d.type); });
 
       if (badData.length > 0) {
-        console.warn("Bad Data: isNaN(sgv)", badData);
+        console.warn('Bad Data: isNaN(sgv)', badData);
       }
 
       return sel;
@@ -519,33 +522,34 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     // if new circle then just display
     prepareFocusCircles(focusCircles.enter().append('circle'))
       .on('mouseover', function (d) {
-        if (d.type != 'sgv' && d.type != 'mbg') return;
+        if (d.type === 'sgv' || d.type === 'mbg') {
+          var bgType = (d.type === 'sgv' ? 'CGM' : (isDexcom(d.device) ? 'Calibration' : 'Meter'))
+            , rawbgValue = 0
+            , noiseLabel = '';
 
-        var bgType = (d.type == 'sgv' ? 'CGM' : (isDexcom(d.device) ? 'Calibration' : 'Meter'))
-          , rawbgValue = 0
-          , noiseLabel = '';
-
-        if (d.type == 'sgv') {
-          if (rawbg.showRawBGs(d.y, d.noise, cal, sbx)) {
-            rawbgValue = scaleBg(rawbg.calc(d, cal, sbx));
+          if (d.type === 'sgv') {
+            if (rawbg.showRawBGs(d.y, d.noise, cal, sbx)) {
+              rawbgValue = scaleBg(rawbg.calc(d, cal, sbx));
+            }
+            noiseLabel = rawbg.noiseCodeToDisplay(d.y, d.noise);
           }
-          noiseLabel = rawbg.noiseCodeToDisplay(d.y, d.noise);
-        }
 
-        tooltip.transition().duration(TOOLTIP_TRANS_MS).style('opacity', .9);
-        tooltip.html('<strong>' + bgType + ' BG:</strong> ' + d.sgv +
-          (d.type == 'mbg' ? '<br/><strong>Device: </strong>' + d.device : '') +
-          (rawbgValue ? '<br/><strong>Raw BG:</strong> ' + rawbgValue : '') +
-          (noiseLabel ? '<br/><strong>Noise:</strong> ' + noiseLabel : '') +
-          '<br/><strong>Time:</strong> ' + formatTime(d.date))
-          .style('left', (d3.event.pageX) + 'px')
-          .style('top', (d3.event.pageY + 15) + 'px');
+          tooltip.transition().duration(TOOLTIP_TRANS_MS).style('opacity', .9);
+          tooltip.html('<strong>' + bgType + ' BG:</strong> ' + d.sgv +
+            (d.type === 'mbg' ? '<br/><strong>Device: </strong>' + d.device : '') +
+            (rawbgValue ? '<br/><strong>Raw BG:</strong> ' + rawbgValue : '') +
+            (noiseLabel ? '<br/><strong>Noise:</strong> ' + noiseLabel : '') +
+            '<br/><strong>Time:</strong> ' + formatTime(d.date))
+            .style('left', (d3.event.pageX) + 'px')
+            .style('top', (d3.event.pageY + 15) + 'px');
+        }
       })
       .on('mouseout', function (d) {
-        if (d.type != 'sgv' && d.type != 'mbg') return;
-        tooltip.transition()
-          .duration(TOOLTIP_TRANS_MS)
-          .style('opacity', 0);
+        if (d.type === 'sgv' || d.type === 'mbg') {
+          tooltip.transition()
+            .duration(TOOLTIP_TRANS_MS)
+            .style('opacity', 0);
+        }
       });
 
     focusCircles.exit()
@@ -648,7 +652,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   }
 
   // called for initial update and updates for resize
-  var updateChart = _.debounce(function updateChart(init) {
+  var updateChart = _.debounce(function debouncedUpdateChart(init) {
 
     if (documentHidden && !init) {
       console.info('Document Hidden, not updating - ' + (new Date()));
@@ -672,7 +676,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     var currentBrushExtent = brush.extent();
 
     // only redraw chart if chart size has changed
-    if ((prevChartWidth != chartWidth) || (prevChartHeight != chartHeight)) {
+    if ((prevChartWidth !== chartWidth) || (prevChartHeight !== chartHeight)) {
 
       prevChartWidth = chartWidth;
       prevChartHeight = chartHeight;
@@ -970,12 +974,12 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
         })
         .attr('fill', function (d) { return d.color; })
         .style('opacity', function (d) { return highlightBrushPoints(d) })
-        .attr('stroke-width', function (d) {if (d.type == 'mbg') return 2; else return 0; })
-        .attr('stroke', function (d) { return 'white'; })
-        .attr('r', function(d) { if (d.type == 'mbg') return 4; else return 2;});
+        .attr('stroke-width', function (d) { return d.type === 'mbg' ? 2 : 0; })
+        .attr('stroke', function ( ) { return 'white'; })
+        .attr('r', function (d) { return d.type === 'mbg' ? 4 : 2; });
 
       if (badData.length > 0) {
-        console.warn("Bad Data: isNaN(sgv)", badData);
+        console.warn('Bad Data: isNaN(sgv)', badData);
       }
 
       return sel;
@@ -999,7 +1003,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   function sgvToColor(sgv) {
     var color = 'grey';
 
-    if (browserSettings.theme == 'colors') {
+    if (browserSettings.theme === 'colors') {
       if (sgv > app.thresholds.bg_high) {
         color = 'red';
       } else if (sgv > app.thresholds.bg_target_top) {
@@ -1019,7 +1023,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   function sgvToColoredRange(sgv) {
     var range = '';
 
-    if (browserSettings.theme == 'colors') {
+    if (browserSettings.theme === 'colors') {
       if (sgv > app.thresholds.bg_high) {
         range = 'urgent';
       } else if (sgv > app.thresholds.bg_target_top) {
@@ -1040,12 +1044,12 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   function generateAlarm(file, reason) {
     alarmInProgress = true;
     var selector = '.audio.alarms audio.' + file;
-    d3.select(selector).each(function (d, i) {
+    d3.select(selector).each(function () {
       var audio = this;
       playAlarm(audio);
       $(this).addClass('playing');
     });
-    $('.bgButton').addClass(file == urgentAlarmSound ? 'urgent' : 'warning');
+    $('.bgButton').addClass(file === urgentAlarmSound ? 'urgent' : 'warning');
     $('#container').addClass('alarming');
 
     updateTitle(reason);
@@ -1054,7 +1058,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
 
   function playAlarm(audio) {
     // ?mute=true disables alarms to testers.
-    if (querystring.mute != 'true') {
+    if (querystring.mute !== 'true') {
       audio.play();
     } else {
       showNotification('Alarm was muted (?mute=true)');
@@ -1095,7 +1099,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
 
     function calcBGByTime(time) {
       var withBGs = _.filter(data, function(d) {
-        return d.y > 39 && d.type == 'sgv';
+        return d.y > 39 && d.type === 'sgv';
       });
 
       var beforeTreatment = _.findLast(withBGs, function (d) {
@@ -1123,11 +1127,11 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       console.warn('found an invalid glucose value', treatment);
     } else {
       if (treatment.glucose && treatment.units && browserSettings.units) {
-        if (treatment.units != browserSettings.units) {
+        if (treatment.units !== browserSettings.units) {
           console.info('found mismatched glucose units, converting ' + treatment.units + ' into ' + browserSettings.units, treatment);
-          if (treatment.units == 'mmol') {
+          if (treatment.units === 'mmol') {
             //BG is in mmol and display in mg/dl
-            treatmentGlucose = Math.round(treatment.glucose * 18)
+            treatmentGlucose = Math.round(treatment.glucose * 18);
           } else {
             //BG is in mg/dl and display in mmol
             treatmentGlucose = scaleBg(treatment.glucose);
@@ -1150,10 +1154,10 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   function drawTreatment(treatment, scale, showValues) {
 
-    if (!treatment.carbs && !treatment.insulin) return;
+    if (!treatment.carbs && !treatment.insulin) { return; }
 
     // don't render the treatment if it's not visible
-    if (Math.abs(xScale(treatment.created_at.getTime())) > window.innerWidth) return;
+    if (Math.abs(xScale(treatment.created_at.getTime())) > window.innerWidth) { return; }
 
     var CR = treatment.CR || 20;
     var carbs = treatment.carbs || CR;
@@ -1164,7 +1168,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       R3 = R2 + 8 / scale;
 
     if (isNaN(R1) || isNaN(R3) || isNaN(R3)) {
-      console.warn("Bad Data: Found isNaN value in treatment", treatment);
+      console.warn('Bad Data: Found isNaN value in treatment', treatment);
       return;
     }
 
@@ -1178,8 +1182,13 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     arc_data[0].outlineOnly = !treatment.carbs;
     arc_data[2].outlineOnly = !treatment.insulin;
 
-    if (treatment.carbs > 0) arc_data[1].element = Math.round(treatment.carbs) + ' g';
-    if (treatment.insulin > 0) arc_data[3].element = Math.round(treatment.insulin * 100) / 100 + ' U';
+    if (treatment.carbs > 0) {
+      arc_data[1].element = Math.round(treatment.carbs) + ' g';
+    }
+
+    if (treatment.insulin > 0) {
+      arc_data[3].element = Math.round(treatment.insulin * 100) / 100 + ' U';
+    }
 
     var arc = d3.svg.arc()
       .innerRadius(function (d) { return 5 * d.inner; })
@@ -1209,10 +1218,11 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
           .duration(TOOLTIP_TRANS_MS)
           .style('opacity', 0);
       });
-    var arcs = treatmentDots.append('path')
+
+    treatmentDots.append('path')
       .attr('class', 'path')
-      .attr('fill', function (d, i) { if (d.outlineOnly) return 'transparent'; else return d.color; })
-      .attr('stroke-width', function (d) {if (d.outlineOnly) return 1; else return 0; })
+      .attr('fill', function (d) { return d.outlineOnly ? 'transparent' : d.color; })
+      .attr('stroke-width', function (d) { return d.outlineOnly ? 1 : 0; })
       .attr('stroke', function (d) { return d.color; })
       .attr('id', function (d, i) { return 's' + i; })
       .attr('d', arc);
@@ -1250,12 +1260,15 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     var BG_MAX = scaleBg(400);
 
     function roundByUnits(value) {
-      if (browserSettings.units == 'mmol') {
+      if (browserSettings.units === 'mmol') {
         return value.toFixed(1);
       } else {
         return Math.round(value);
       }
     }
+
+    //TODO: clean when moving the ar2 plugin
+    var y;
 
     // these are the one sigma limits for the first 13 prediction interval uncertainties (65 minutes)
     var CONE = [0.020, 0.041, 0.061, 0.081, 0.099, 0.116, 0.132, 0.146, 0.159, 0.171, 0.182, 0.192, 0.201];
@@ -1264,7 +1277,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     // for testing
     //var CONE = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     if (actual.length < lookback+1) {
-      var y = [Math.log(actual[actual.length-1].sgv / BG_REF), Math.log(actual[actual.length-1].sgv / BG_REF)];
+      y = [Math.log(actual[actual.length-1].sgv / BG_REF), Math.log(actual[actual.length-1].sgv / BG_REF)];
     } else {
       var elapsedMins = (actual[actual.length-1].date - actual[actual.length-1-lookback].date) / ONE_MINUTE;
       // construct a '5m ago' sgv offset from current sgv by the average change over the lookback interval
@@ -1282,9 +1295,10 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     var AR = [-0.723, 1.716];
     var dt = actual[lookback].date.getTime();
     var predictedColor = 'blue';
-    if (browserSettings.theme == 'colors') {
+    if (browserSettings.theme === 'colors') {
       predictedColor = 'cyan';
     }
+
     for (var i = 0; i < CONE.length; i++) {
       y = [y[1], AR[0] * y[0] + AR[1] * y[1]];
       dt = dt + FIVE_MINUTES;
@@ -1300,12 +1314,15 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
         sgv: Math.max(BG_MIN, Math.min(BG_MAX, roundByUnits(BG_REF * Math.exp((y[1] + 2 * CONE[i]))))),
         color: predictedColor
       };
-      predicted.forEach(function (d) {
-        d.type = 'forecast';
-        if (d.sgv < BG_MIN)
-          d.color = 'transparent';
-      })
     }
+
+    predicted.forEach(function (d) {
+      d.type = 'forecast';
+      if (d.sgv < BG_MIN) {
+        d.color = 'transparent';
+      }
+    });
+
     return predicted;
   }
 
@@ -1319,7 +1336,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     // Dim the screen by reducing the opacity when at nighttime
     if (browserSettings.nightMode) {
       var dateTime = new Date();
-      if (opacity.current != opacity.NIGHT && (dateTime.getHours() > 21 || dateTime.getHours() < 7)) {
+      if (opacity.current !== opacity.NIGHT && (dateTime.getHours() > 21 || dateTime.getHours() < 7)) {
         $('body').css({ 'opacity': opacity.NIGHT });
       } else {
         $('body').css({ 'opacity': opacity.DAY });
@@ -1328,7 +1345,9 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   }
 
   function updateClockDisplay() {
-    if (inRetroMode()) return;
+    if (inRetroMode()) {
+      return;
+    }
     now = Date.now();
     var dateTime = new Date(now);
     $('#currentTime').text(formatTime(dateTime, true)).css('text-decoration', '');
@@ -1344,7 +1363,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
   }
 
   function isTimeAgoAlarmType(alarmType) {
-    return alarmType == 'warnTimeAgo' || alarmType == 'urgentTimeAgo';
+    return alarmType === 'warnTimeAgo' || alarmType === 'urgentTimeAgo';
   }
 
   function checkTimeAgoAlarm(ago) {
@@ -1355,9 +1374,8 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       currentAlarmType = alarm.type;
       console.info('generating timeAgoAlarm', alarm.type);
       $('#container').addClass('alarming-timeago');
-      console.log('ago:', ago);
       var message = {'title': 'Last data received ', 'message': ago.value + ago.label};
-      if (level == 'warn') {
+      if (level === 'warn') {
         generateAlarm(alarmSound, message);
       } else {
         generateAlarm(urgentAlarmSound, message);
@@ -1379,12 +1397,12 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     }
 
     if (
-      (browserSettings.alarmTimeAgoWarn && ago.status == 'warn')
-      || (browserSettings.alarmTimeAgoUrgent && ago.status == 'urgent')) {
+      (browserSettings.alarmTimeAgoWarn && ago.status === 'warn')
+      || (browserSettings.alarmTimeAgoUrgent && ago.status === 'urgent')) {
       checkTimeAgoAlarm(ago);
     }
 
-    if (alarmingNow() && ago.status == 'current' && isTimeAgoAlarmType(currentAlarmType)) {
+    if (alarmingNow() && ago.status === 'current' && isTimeAgoAlarmType(currentAlarmType)) {
       $('#container').removeClass('alarming-timeago');
       stopAlarm(true, ONE_MIN_IN_MS);
     }
@@ -1411,7 +1429,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       .style('opacity', 0);
 
     // Tick Values
-    if (browserSettings.units == 'mmol') {
+    if (browserSettings.units === 'mmol') {
       tickValues = [
         2.0
         , Math.round(scaleBg(app.thresholds.bg_low))
@@ -1491,7 +1509,9 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     var silenceDropdown = new Dropdown('.dropdown-menu');
 
     $('.bgButton').click(function (e) {
-      if (alarmingNow()) silenceDropdown.open(e);
+      if (alarmingNow()) {
+        silenceDropdown.open(e);
+      }
     });
 
     $('#silenceBtn').find('a').click(function (e) {
@@ -1526,10 +1546,14 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       }
 
       // If there was no delta data, just return the original data
-      if (!receivedDataArray) return cachedDataArray;
+      if (!receivedDataArray) {
+        return cachedDataArray;
+      }
 
       // If this is not a delta update, replace all data
-      if (!isDelta) return receivedDataArray;
+      if (!isDelta) {
+        return receivedDataArray;
+      }
 
       // If this is delta, calculate the difference, merge and sort
       var diff = nsArrayDiff(cachedDataArray,receivedDataArray);
@@ -1540,19 +1564,23 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
 
     socket.on('dataUpdate', function receivedSGV(d) {
 
-      if (!d) return;
+      if (!d) {
+        return;
+      }
 
       // Calculate the diff to existing data and replace as needed
 
       SGVdata = mergeDataUpdate(d.delta, SGVdata, d.sgvs);
       MBGdata = mergeDataUpdate(d.delta,MBGdata, d.mbgs);
       treatments = mergeDataUpdate(d.delta,treatments, d.treatments);
+
       if (d.profiles) {
         profile = d.profiles[0];
         Nightscout.profile.loadData(d.profiles);
       }
-      if (d.cals) cal = d.cals[d.cals.length-1];
-      if (d.devicestatus) devicestatusData = d.devicestatus;
+
+      if (d.cals) { cal = d.cals[d.cals.length-1]; }
+      if (d.devicestatus) { devicestatusData = d.devicestatus; }
 
       // Do some reporting on the console
       console.log('Total SGV data size', SGVdata.length);
@@ -1576,7 +1604,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
           } else {
             return null;
           }
-        }).filter(function(entry) { return entry != null; });
+        }).filter(function(entry) { return entry !== null; });
       }
       var temp2 = SGVdata.map(function (obj) {
         return { date: new Date(obj.x), y: obj.y, sgv: scaleBg(obj.y), direction: obj.direction, color: sgvToColor(obj.y), type: 'sgv', noise: obj.noise, filtered: obj.filtered, unfiltered: obj.unfiltered};
@@ -1589,8 +1617,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
       data = data.concat(MBGdata.map(function (obj) { return { date: new Date(obj.x), y: obj.y, sgv: scaleBg(obj.y), color: 'red', type: 'mbg', device: obj.device } }));
 
       data.forEach(function (d) {
-        if (d.y < 39)
-          d.color = 'transparent';
+        if (d.y < 39) { d.color = 'transparent'; }
       });
 
       // OPTIMIZATION: precalculate treatment location in timeline
@@ -1615,7 +1642,7 @@ var app = {}, browserSettings = {}, browserStorage = $.localStorage;
     // Alarms and Text handling
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     socket.on('connect', function () {
-      console.log('Client connected to server.')
+      console.log('Client connected to server.');
     });
 
 
